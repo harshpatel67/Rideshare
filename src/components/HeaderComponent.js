@@ -2,70 +2,87 @@ import React, { Component } from 'react';
 import { Navbar, NavbarBrand, Nav, NavbarToggler, Collapse, NavItem, Jumbotron,
     Button, Modal, ModalHeader, ModalBody,
     Form, FormGroup, Input, Label } from 'reactstrap';
-import { NavLink } from 'react-router-dom';
+import { NavLink, withRouter } from 'react-router-dom';
 
 class Header extends Component {
 
     constructor(props) {
         super(props);
+        console.log(this.props.store)
         this.state = {
+            email: "",
+            password: "",
+            confirmPassword: "",
             isNavOpen: false,
             isLoginModelOpen: false,
-            isSignupModelOpen: false
+            isSignupModelOpen: false,
+            isPasswordMatch: true
         };
-        this.toggleNav = this.toggleNav.bind(this);
-        this.toggleLoginModal = this.toggleLoginModal.bind(this);
-        this.handleLogin = this.handleLogin.bind(this);
-        this.handleGoogleLogin = this.handleGoogleLogin.bind(this);
-        this.handleLogout = this.handleLogout.bind(this);
-        this.handleSignup = this.handleSignup.bind(this);
-        this.toggleSignupModal = this.toggleSignupModal.bind(this);
     }
 
-    toggleNav() {
+    toggleNav = () => {
         this.setState({
             isNavOpen: !this.state.isNavOpen
         });
     }
 
-    toggleLoginModal() {
+    toggleLoginModal = () => {
         this.setState({
             isLoginModelOpen: !this.state.isLoginModelOpen
         });
     }
 
-    toggleSignupModal() {
+    toggleSignupModal = () => {
         this.setState({
             isSignupModelOpen: !this.state.isSignupModelOpen
         });
     }
 
-    handleLogin(event) {
+    handleLogin = (event) => {
         this.toggleLoginModal();
-        this.props.loginUser({email: this.email.value, password: this.password.value});
+        this.props.store.loginUser({email: this.state.email, password: this.state.password});
         event.preventDefault();
 
     }
 
-    handleSignup(event) {
+    handleSignup = (event) => {
+
+        if (this.state.password !== this.state.confirmPassword) {
+            this.setState({
+                isPasswordMatch: false
+            })
+        }   else {
+            this.toggleSignupModal();
+            this.props.store.signupUser({email: this.state.email, password: this.state.password});
+        }
+        event.preventDefault();
+
+    }
+
+    handleCreateNewAccount = () => {
+        this.toggleLoginModal();
         this.toggleSignupModal();
-        this.props.signupUser({email: this.email.value, password: this.password.value});
-        event.preventDefault();
-
     }
 
-    handleGoogleLogin(event) {
+    handleGoogleLogin = (event) => {
         this.toggleLoginModal();
-        this.props.googleLogin();
+        this.props.store.googleLogin();
+        this.props.history.push("/");
         event.preventDefault();
     }
 
-    handleLogout() {
-        this.props.logoutUser();
+    handleLogout = () => {
+        this.props.store.logoutUser();
     }
 
-    handleProfileUpdate(){
-
+    handleChange = e => {
+        this.setState({
+            [e.target.name]: e.target.value
+        })
+    }
+    
+    handleUpdateProfile = () => {
+        this.props.history.push('/updateProfile')
     }
 
     render() {
@@ -91,23 +108,23 @@ class Header extends Component {
                                     </NavLink>
                                 </NavItem>
                                 <NavItem className="mr-2">
-                                    { !this.props.auth.isAuthenticated ?
+                                    { !this.props.store.auth.isAuthenticated ?
                                         <Button outline onClick={this.toggleLoginModal}>
                                             <span className="fa fa-sign-in fa-lg "> Login </span>
-                                            {this.props.auth.isFetching ?
+                                            {this.props.store.auth.isFetching ?
                                                 <span className="fa fa-spinner fa-pulse fa-fw"></span>
                                                 : null
                                             }
                                         </Button>
                                         :
                                         <div>
-                                        <div className="navbar-text mr-3">{this.props.auth.user.displayName}</div>
-                                        <Button outline onClick={this.handleProfileUpdate}>
+                                        <div className="navbar-text mr-3">{this.props.store.auth.user.displayName}</div>
+                                        <Button outline onClick={this.handleUpdateProfile}>
                                         <span className="fa fa-sign-out fa-lg"></span> Update Profile
                                         </Button>
                                         <Button outline onClick={this.handleLogout}>
                                             <span className="fa fa-sign-out fa-lg"></span> Logout
-                                            {this.props.auth.isFetching ?
+                                            {this.props.store.auth.isFetching ?
                                                 <span className="fa fa-spinner fa-pulse fa-fw"></span>
                                                 : null
                                             }
@@ -117,10 +134,10 @@ class Header extends Component {
 
                                 </NavItem>
                                 <NavItem>
-                                    { !this.props.auth.isAuthenticated ?
+                                    { !this.props.store.auth.isAuthenticated ?
                                         <Button outline onClick={this.toggleSignupModal}>
                                             <span className="fa fa-sign-up fa-lg "> SignUp </span>
-                                            {this.props.auth.isFetching ?
+                                            {this.props.store.auth.isFetching ?
                                                 <span className="fa fa-spinner fa-pulse fa-fw"></span>
                                                 : null
                                             }
@@ -135,34 +152,26 @@ class Header extends Component {
                         </Collapse>
                     </div>
                 </Navbar>
-                <Jumbotron>
-                    <div className="container">
-                        <div className="row row-header">
-                            <div className="col-12 col-sm-6">
-                                <h1>Find Your Cheapest Ride Here!</h1>
-                                <p>We provide rideshare for intercity as well as intracity</p>
-                            </div>
-                        </div>
-                    </div>
-                </Jumbotron>
                 <Modal isOpen={this.state.isLoginModelOpen} toggle={this.toggleLoginModal}>
                     <ModalHeader toggle={this.toggleLoginModal}>Login</ModalHeader>
                     <ModalBody>
                         <Form onSubmit={this.handleLogin}>
                             <FormGroup>
-                                <Label htmlFor="email">Email</Label>
+                                <Label>Email</Label>
                                 <Input type="text" id="email" name="email"  placeholder="ex:smith@gmail.com"
-                                    innerRef={(input) => this.email = input} />
+                                    onChange={this.handleChange} value={this.state.email} />
                             </FormGroup>
                             <FormGroup>
-                                <Label htmlFor="password">Password</Label>
+                                <Label>Password</Label>
                                 <Input type="password" id="password" name="password"
-                                    innerRef={(input) => this.password = input}  />
+                                    onChange={this.handleChange} value={this.state.password}  />
                             </FormGroup>
                             <Button type="submit" value="submit" color="primary">Login</Button>
                         </Form>
-                        <p></p>
+                        <p>------------------------------------OR---------------------------------</p>
                         <Button color="danger" onClick={this.handleGoogleLogin}><span className="fa fa-google fa-lg"></span> Login with Google</Button>
+                        <p></p>
+                        <p><a href="javascript:" onClick={this.handleCreateNewAccount}> New User? Create a new account! </a></p>
                     </ModalBody>
                 </Modal>
 
@@ -171,19 +180,27 @@ class Header extends Component {
                     <ModalBody>
                         <Form onSubmit={this.handleSignup}>
                             <FormGroup>
-                                <Label htmlFor="email">Email</Label>
+                                <Label>Email</Label>
                                 <Input type="text" id="email" name="email" placeholder="ex:smith@gmail.com"
-                                    innerRef={(input) => this.email = input} />
+                                    onChange={this.handleChange} value={this.state.email}/>
                             </FormGroup>
                             <FormGroup>
-                                <Label htmlFor="password">Password</Label>
+                                <Label>Password</Label>
                                 <Input type="password" id="password" name="password"
-                                    innerRef={(input) => this.password = input}  />
+                                    onChange={this.handleChange} value={this.state.password} />
+                            </FormGroup>
+                            <FormGroup>
+                                <Label> Confirm Password</Label>
+                                
+                                {this.state.isPasswordMatch? <p></p> : <p style={{color:"red"}}>Password Doesn't Match!!!</p>} 
+                                
+                                <Input type="password" id="confirmPassword" name="confirmPassword"
+                                    onChange={this.handleChange} value={this.state.confirmPassword} />
                             </FormGroup>
                             
                             <Button type="submit" value="submit" color="primary">SignUp</Button>
                         </Form>
-                        <p></p>
+                        <p>------------------------------------OR---------------------------------</p>
                         <Button color="danger" onClick={this.handleGoogleLogin}><span className="fa fa-google fa-lg"></span> Signup with Google</Button>
                     </ModalBody>
                 </Modal>
@@ -192,4 +209,4 @@ class Header extends Component {
     }
 }
 
-export default Header;
+export default withRouter(Header);
